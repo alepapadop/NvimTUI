@@ -1,13 +1,12 @@
 local constants = require("tui.constants")
 
-local Node = {}
-
-Node.__index = Node
 
 local Node = {}
 Node.__index = Node
 
+-- ************************************************************************* --
 
+-- ************************************************************************* --
 local function new_rect()
     return {
         x = 0,
@@ -17,6 +16,9 @@ local function new_rect()
     }
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function Node.new(kind, props, children, options)
     options = options or {}
 
@@ -47,6 +49,9 @@ function Node.new(kind, props, children, options)
     return self
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function Node:add(child)
     child.parent = self
     self.children[#self.children + 1] = child
@@ -54,10 +59,16 @@ function Node:add(child)
     return self
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function Node:is_leaf()
     return #self.children == 0
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function Node:set_rect(x, y, width, height)
     self.rect.x = x
     self.rect.y = y
@@ -66,5 +77,10 @@ function Node:set_rect(x, y, width, height)
 
     return self
 end
+
+-- ************************************************************************* --
+
+-- ************************************************************************* --
+
 
 return Node

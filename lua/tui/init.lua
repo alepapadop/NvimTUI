@@ -3,7 +3,9 @@ local constants = require("tui.constants")
 
 local M = {}
 
+-- ************************************************************************* --
 
+-- ************************************************************************* --
 function M.text(text, options)
     return Node.new(
         constants.NodeKind.TEXT,
@@ -15,6 +17,9 @@ function M.text(text, options)
     )
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function M.row(children, options)
     return Node.new(
         constants.NodeKind.ROW,
@@ -24,6 +29,9 @@ function M.row(children, options)
     )
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function M.column(children, options)
     return Node.new(
         constants.NodeKind.COLUMN,
@@ -33,6 +41,9 @@ function M.column(children, options)
     )
 end
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 function M.new()
     error("tui.new() is not implemented yet")
 end

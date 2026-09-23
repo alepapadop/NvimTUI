@@ -2,6 +2,9 @@ local utils = require("tui.utils")
 
 local constants = {}
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 constants.NodeKind = utils.createEnum({
 	TEXT = 1,
 	ROW = 2,
@@ -9,6 +12,9 @@ constants.NodeKind = utils.createEnum({
 
 })
 
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 constants.NodeKindName = utils.createEnum({
 	[constants.NodeKind.TEXT] = "text",
 	[constants.NodeKind.ROW] = "row",
