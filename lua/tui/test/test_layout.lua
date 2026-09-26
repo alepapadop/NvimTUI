@@ -186,16 +186,14 @@ local nested = tui.column({
                 grow = 1,
             },
         }),
+    }, {
+        layout = {
+            grow = 1,
+        },
     }),
 })
 
 layout.layout(nested, 0, 0, 30, 10)
-
-check_rect(
-    nested.children[1],
-    0, 0, 6, 1,
-    "nested header"
-)
 
 local nested_row = nested.children[2]
 

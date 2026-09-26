@@ -5,6 +5,15 @@ local M = {}
 -- ************************************************************************* --
 
 -- ************************************************************************* --
+
+local function is_container(node)
+    return node.kind == constants.NodeKind.ROW
+        or node.kind == constants.NodeKind.COLUMN
+end
+
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 local function base_size(node)
 
     if node.kind == constants.NodeKind.TEXT then
@@ -134,8 +143,10 @@ function M.row(node, x, y, width, height)
 
         if child.layout.height ~= nil then
             child_height = child.layout.height
-        else
+        elseif is_container(child) then
             child_height = height
+        else
+            child_height = requested_height(child)
         end
 
         layout_node(
@@ -193,8 +204,10 @@ function M.column(node, x, y, width, height)
 
         if child.layout.width ~= nil then
             child_width = child.layout.width
-        else
+        elseif is_container(child) then
             child_width = width
+        else
+            child_width = requested_width(child)
         end
 
         layout_node(
