@@ -2,6 +2,26 @@ local constants = require("tui.constants")
 
 local M = {}
 
+
+-- TEXT
+--     intrinsic size = text length × 1
+-- 
+-- ROW
+--     main axis = horizontal
+--     fixed children use requested/intrinsic width
+--     grow children divide remaining width
+--     containers stretch in the cross-axis
+-- 
+-- COLUMN
+--     main axis = vertical
+--     fixed children use requested/intrinsic height
+--     grow children divide remaining height
+--     containers stretch in the cross-axis
+-- 
+-- GROW is local to its immediate parent
+
+
+
 -- ************************************************************************* --
 
 -- ************************************************************************* --
@@ -89,7 +109,7 @@ local function layout_node(node, x, y, width, height)
     node:set_rect(x, y, width, height)
 
     if node.kind == constants.NodeKind.TEXT then
-        assert(0, "Node " .. constants.NodeKindName[node.kind] .. " is not a layout")
+--        assert(0, "Node " .. constants.NodeKindName[node.kind] .. " is not a layout")
         return
     end
 
@@ -134,10 +154,6 @@ function M.row(node, x, y, width, height)
         else
             child_width = requested_width(child)
         end
-
-        --local child_height = requested_height(child)
-
-        --child_height = math.min(child_height, height)
 
         local child_height
 
@@ -195,10 +211,6 @@ function M.column(node, x, y, width, height)
         else
             child_height = requested_height(child)
         end
-
-        --local child_width = requested_width(child)
-
-        --child_width = math.min(child_width, width)
 
         local child_width
 
