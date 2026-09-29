@@ -34,17 +34,75 @@ end
 -- ************************************************************************* --
 
 -- ************************************************************************* --
+
+local function padding(node)
+    local value = node.layout.padding
+
+    if value == nil then
+        return 0, 0, 0, 0
+    end
+
+    if type(value) == "number" then
+        return value, value, value, value
+    end
+
+    return value.top or 0,
+            value.right or 0,
+            value.bottom or 0,
+            value.left or 0
+end
+
+-- ************************************************************************* --
+
+-- ************************************************************************* --
+
+local function align_offset(align, available, size)
+
+    if align == "center" then
+        return math.floor((available - size) / 2)
+    end
+
+    if align == "end" then
+        return available - size
+    end
+
+    return 0
+end
+
+-- ************************************************************************* --
+
+-- ************************************************************************* --
+
+local function justify_offset(align, available)
+
+    if align == "center" then
+        return math.floor(available / 2)
+    end
+
+    if align == "end" then
+        return available
+    end
+
+    return 0
+end
+
+-- ************************************************************************* --
+
+-- ************************************************************************* --
 local function base_size(node)
+
+    local width
+    local height
 
     if node.kind == constants.NodeKind.TEXT then
         local text = node.props.text or ""
 
-        return #text, 1
-    end
+        width = #text
+        height = 1
 
-    if node.kind == constants.NodeKind.ROW then
-        local width = 0
-        local height = 0
+    elseif node.kind == constants.NodeKind.ROW then
+        width = 0
+        height = 0
 
         for _, child in ipairs(node.children) do
             local child_width, child_height = base_size(child)
@@ -53,12 +111,9 @@ local function base_size(node)
             height = math.max(height, child_height)
         end
 
-        return width, height
-    end
-
-    if node.kind == constants.NodeKind.COLUMN then
-        local width = 0
-        local height = 0
+    elseif node.kind == constants.NodeKind.COLUMN then
+        width = 0
+        height = 0
 
         for _, child in ipairs(node.children) do
             local child_width, child_height = base_size(child)
@@ -66,11 +121,13 @@ local function base_size(node)
             width = math.max(width, child_width)
             height = height + child_height
         end
-
-        return width, height
+    else
+        return 0, 0
     end
 
-    return 0, 0
+    local top, right, bottom, left = padding(node)
+
+    return width + left + right, height + top + bottom
 end
 
 -- ************************************************************************* --
@@ -126,11 +183,16 @@ end
 function M.row(node, x, y, width, height)
 
     local children = node.children
-    local count = #children
 
-    if count == 0 then
+    if #children == 0 then
         return
     end
+
+    local top, right, bottom, left = padding(node)
+    local content_x = x + left
+    local content_y = y + top
+    local content_width = math.max(0, width - left - right)
+    local content_height = math.max(0, height - top - bottom)
 
     local fixed_width = 0
     local grow_total = 0
@@ -144,7 +206,12 @@ function M.row(node, x, y, width, height)
     end
 
     local remaining = math.max(0, width - fixed_width)
-    local current_x = x
+    local main_offset = 0
+
+    if grow_total == 0 then
+        main_offset = justify_offset(node.layout.justify or "start", remaining)
+
+    local current_x = content_x + main_offset
 
     for _, child in ipairs(children) do
         local child_width
@@ -159,16 +226,25 @@ function M.row(node, x, y, width, height)
 
         if child.layout.height ~= nil then
             child_height = child.layout.height
-        elseif is_container(child) then
-            child_height = height
+        elseif is_container(child) and (node.layout.align or "stretch") == "stretch" then
+            child_height = content_height
         else
             child_height = requested_height(child)
+        end
+
+        local child_y = content_y
+        local align = node.layout.align or "stretch"
+
+        if align ~= "stretch" and child_height < content_height then
+            child_y = content_y + align_offset(align, content_height, child_height)
+        elseif align == "stretch" then
+            child_height = content_height
         end
 
         layout_node(
             child,
             current_x,
-            y,
+            child_y,
             child_width,
             child_height
         )
@@ -183,11 +259,19 @@ end
 function M.column(node, x, y, width, height)
 
     local children = node.children
-    local count = #children
 
-    if count == 0 then
+    if #children == 0 then
         return
     end
+
+    local top, right, bottom, left = padding(node)
+
+    local content_x = x + left
+    local content_y = y + top
+
+    local content_width = math.max(0, width - left - right)
+    local content_height = math.max(0, height - top - bottom)
+
 
     local fixed_height = 0
     local grow_total = 0
@@ -201,7 +285,13 @@ function M.column(node, x, y, width, height)
     end
 
     local remaining = math.max(0, height - fixed_height)
-    local current_y = y
+    if grow_total == 0 then
+        main_offset = justify_offset(node.layout.justify or "start", remaining)
+    end
+
+    local current_y = content_y + main_offset
+
+
 
     for _, child in ipairs(children) do
         local child_height
@@ -216,15 +306,26 @@ function M.column(node, x, y, width, height)
 
         if child.layout.width ~= nil then
             child_width = child.layout.width
-        elseif is_container(child) then
-            child_width = width
+        elseif is_container(child) and (node.layout.align or "stretch") == "stretch" then
+            child_width = content_width
         else
             child_width = requested_width(child)
         end
 
+        local child_x = content_x
+
+        local align = node.layout.align or "stretch"
+
+        if align ~= "stretch" and child_width < content_width then
+            child_x = content_x + align_offset(align, content_width, child_width)
+        elseif align == "stretch" then
+            child_width = content_width
+        end
+
+
         layout_node(
             child,
-            x,
+            child_x,
             current_y,
             child_width,
             child_height
