@@ -63,14 +63,14 @@ end
 
 -- ************************************************************************* --
 
-local function align_offset(align, available, size)
+local function align_offset(align, available)
 
     if align == constants.Align.CENTER then
-        return math.floor((available - size) / 2)
+        return math.floor(available / 2)
     end
 
-    if align == constants.Align.RIGHT then
-        return available - size
+    if align == constants.Align.END then
+        return available
     end
 
     return 0
@@ -80,14 +80,14 @@ end
 
 -- ************************************************************************* --
 
-local function justify_offset(align, available)
+local function place_offset(align, available, size)
 
-    if align == constants.Justify.CENTER then
-        return math.floor(available / 2)
+    if align == constants.Place.CENTER then
+        return math.floor((available - size) / 2)
     end
 
-    if align == constants.Justify.DOWN then
-        return available
+    if align == constants.Place.END then
+        return available - size
     end
 
     return 0
@@ -220,7 +220,7 @@ function M.row(node, x, y, width, height)
 
     -- if no one wants to grow calculate the main offset of the begginning
     if grow_total == 0 then
-        main_offset = justify_offset(node.layout.justify or constants.Justify.START, remaining)
+        main_offset = align_offset(node.layout.align or constants.align.START, remaining)
     end
 
     -- calculate the current position of x
@@ -243,19 +243,18 @@ function M.row(node, x, y, width, height)
         -- if nothing get the the size of the content of the layout
         if child.layout.height ~= nil then
             child_height = child.layout.height
-        elseif is_container(child) and (node.layout.align or constants.Align.STRETCH) == constants.Justify.STRETCH then
+        elseif is_container(child) and (node.layout.place or constants.place.STRETCH) == constants.place.STRETCH then
             child_height = content_height
         else
             child_height = requested_height(child)
         end
 
         local child_y = content_y
-        local align = node.layout.align or constants.Align.STRETCH
+        local place = node.layout.place or constants.Place.STRETCH
 
-        -- if we downt have an align AUTO move the y in the center if possible
-        if align ~= constants.Align.STRETCH and child_height < content_height then
-            child_y = content_y + align_offset(align, content_height, child_height)
-        elseif align == constants.Align.STRETCH then
+        if place ~= constants.Place.STRETCH and child_height < content_height then
+            child_y = content_y + place_offset(place, content_height, child_height)
+        elseif place == constants.Place.STRETCH then
             child_height = content_height
         end
 
