@@ -25,33 +25,23 @@ constants.NodeKindName = utils.createEnum({
 
 -- ************************************************************************* --
 constants.Align = utils.createEnum({
-    LEFT = 1,
-    RIGHT = 2,
-    CENTTER = 3,
+    START = 1,
+    END = 2,
+    CENTER = 3,
     AUTO = 4,
+    STRETCH = 4,
 })
 
 constants.AlignName = utils.createEnum({
-    [constants.Align.LEFT] = "left",
-    [constants.Align.RIGHT] = "right",
+    [constants.Align.START] = "start",
+    [constants.Align.END] = "end",
     [constants.Align.CENTER] = "center",
     [constants.Align.AUTO] = "auto",
+    [constants.Align.STRETCH] = "stretch",
 })
 
-constants.Justify = utils.createEnum({
-    LEFT = 1,
-    RIGHT = 2,
-    CENTTER = 3,
-    AUTO = 4,
-})
-
-constants.JustifyName = utils.createEnum({
-    [constants.Justify.LEFT] = "left",
-    [constants.Justify.RIGHT] = "right",
-    [constants.Justify.CENTER] = "center",
-    [constants.Justify.AUTO] = "auto",
-
-})
+constants.Place = constants.Align
+constants.PlaceName = constants.AlignName
 
 
 return constants

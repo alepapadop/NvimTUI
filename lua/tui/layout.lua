@@ -22,6 +22,13 @@ local M = {}
 
 
 
+-- Naming conventions
+-- 
+-- Container        align               place
+-- ROW              Horizontal          Vertical
+-- COLUMNG          Verical             Horizontal
+
+
 -- ************************************************************************* --
 
 -- ************************************************************************* --
@@ -58,11 +65,11 @@ end
 
 local function align_offset(align, available, size)
 
-    if align == "center" then
+    if align == constants.Align.CENTER then
         return math.floor((available - size) / 2)
     end
 
-    if align == "end" then
+    if align == constants.Align.RIGHT then
         return available - size
     end
 
@@ -75,11 +82,11 @@ end
 
 local function justify_offset(align, available)
 
-    if align == "center" then
+    if align == constants.Justify.CENTER then
         return math.floor(available / 2)
     end
 
-    if align == "end" then
+    if align == constants.Justify.DOWN then
         return available
     end
 
@@ -139,7 +146,7 @@ local function requested_width(node)
         return node.layout.width
     end
 
-    local width = base_size(node)
+    local width, _ = base_size(node)
 
     return width
 end
@@ -197,6 +204,8 @@ function M.row(node, x, y, width, height)
     local fixed_width = 0
     local grow_total = 0
 
+    -- make the initial calc for the fixed width and also for the total grow request. Those
+    -- values will be used later
     for _, child in ipairs(children) do
         if child.layout.grow ~= nil then
             grow_total = grow_total + child.layout.grow
@@ -205,17 +214,23 @@ function M.row(node, x, y, width, height)
         end
     end
 
-    local remaining = math.max(0, width - fixed_width)
+    -- find what remains in order to place also the layouts that have the grow parameter
+    local remaining = math.max(0, content_width - fixed_width)
     local main_offset = 0
 
+    -- if no one wants to grow calculate the main offset of the begginning
     if grow_total == 0 then
-        main_offset = justify_offset(node.layout.justify or "start", remaining)
+        main_offset = justify_offset(node.layout.justify or constants.Justify.START, remaining)
+    end
 
+    -- calculate the current position of x
     local current_x = content_x + main_offset
 
     for _, child in ipairs(children) do
         local child_width
 
+        -- simple calculation for the width, if we have a grow get the grow that
+        -- owns the child from the total grow
         if child.layout.grow ~= nil and grow_total > 0 then
             child_width = remaining * child.layout.grow / grow_total
         else
@@ -224,20 +239,23 @@ function M.row(node, x, y, width, height)
 
         local child_height
 
+        -- if a height exist in the layout get the layout height, if the justify is AUTO get the available size
+        -- if nothing get the the size of the content of the layout
         if child.layout.height ~= nil then
             child_height = child.layout.height
-        elseif is_container(child) and (node.layout.align or "stretch") == "stretch" then
+        elseif is_container(child) and (node.layout.align or constants.Align.STRETCH) == constants.Justify.STRETCH then
             child_height = content_height
         else
             child_height = requested_height(child)
         end
 
         local child_y = content_y
-        local align = node.layout.align or "stretch"
+        local align = node.layout.align or constants.Align.STRETCH
 
-        if align ~= "stretch" and child_height < content_height then
+        -- if we downt have an align AUTO move the y in the center if possible
+        if align ~= constants.Align.STRETCH and child_height < content_height then
             child_y = content_y + align_offset(align, content_height, child_height)
-        elseif align == "stretch" then
+        elseif align == constants.Align.STRETCH then
             child_height = content_height
         end
 
