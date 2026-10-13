@@ -20,7 +20,12 @@ local M = {}
 -- 
 -- GROW is local to its immediate parent
 
-
+-- align: controls positioning along the main axis
+-- place: controls positioning along the cross axis
+-- grow: distributes remaining space along the main axis
+-- padding: reduces the available content area
+-- Container children stretch across the cross axis when place = STRETCH 
+-- text children keep their intrinsic size unless explicitly sized.
 
 -- Naming conventions
 -- 
@@ -63,35 +68,18 @@ end
 
 -- ************************************************************************* --
 
-local function align_offset(align, available)
+local function align_offset(align, available, size)
+    local remaining = math.max(0, available - size)
 
     if align == constants.Align.CENTER then
-        return math.floor(available / 2)
-    end
-
-    if align == constants.Align.END then
-        return available
-    end
-
-    return 0
-end
-
--- ************************************************************************* --
-
--- ************************************************************************* --
-
-local function place_offset(align, available, size)
-
-    if align == constants.Place.CENTER then
-        return math.floor((available - size) / 2)
-    end
-
-    if align == constants.Place.END then
-        return available - size
+        return math.floor(remaining / 2)
+    elseif align == constants.Align.END then
+        return remaining
     end
 
     return 0
 end
+
 
 -- ************************************************************************* --
 
@@ -218,9 +206,12 @@ function M.row(node, x, y, width, height)
     local remaining = math.max(0, content_width - fixed_width)
     local main_offset = 0
 
+    local align = node.layout.align or constants.Align.START
+    local place = node.layout.place or constants.Place.STRETCH
+
     -- if no one wants to grow calculate the main offset of the begginning
     if grow_total == 0 then
-        main_offset = align_offset(node.layout.align or constants.align.START, remaining)
+        main_offset = align_offset(align, content_width, fixed_width)
     end
 
     -- calculate the current position of x
@@ -243,19 +234,16 @@ function M.row(node, x, y, width, height)
         -- if nothing get the the size of the content of the layout
         if child.layout.height ~= nil then
             child_height = child.layout.height
-        elseif is_container(child) and (node.layout.place or constants.place.STRETCH) == constants.place.STRETCH then
+        elseif is_container(child) and place == constants.Place.STRETCH then
             child_height = content_height
         else
             child_height = requested_height(child)
         end
 
         local child_y = content_y
-        local place = node.layout.place or constants.Place.STRETCH
 
         if place ~= constants.Place.STRETCH and child_height < content_height then
-            child_y = content_y + place_offset(place, content_height, child_height)
-        elseif place == constants.Place.STRETCH then
-            child_height = content_height
+            child_y = content_y + align_offset(place, content_height, child_height)
         end
 
         layout_node(
@@ -301,9 +289,14 @@ function M.column(node, x, y, width, height)
         end
     end
 
-    local remaining = math.max(0, height - fixed_height)
+    local remaining = math.max(0, content_height - fixed_height)
+    local main_offset = 0;
+
+    local align = node.layout.align or constants.Align.START
+    local place = node.layout.place or constants.Place.STRETCH
+
     if grow_total == 0 then
-        main_offset = justify_offset(node.layout.justify or "start", remaining)
+        main_offset = align_offset(align, content_height, fixed_height)
     end
 
     local current_y = content_y + main_offset
@@ -323,7 +316,7 @@ function M.column(node, x, y, width, height)
 
         if child.layout.width ~= nil then
             child_width = child.layout.width
-        elseif is_container(child) and (node.layout.align or "stretch") == "stretch" then
+        elseif is_container(child) and place == constants.Place.STRETCH then
             child_width = content_width
         else
             child_width = requested_width(child)
@@ -331,12 +324,9 @@ function M.column(node, x, y, width, height)
 
         local child_x = content_x
 
-        local align = node.layout.align or "stretch"
 
-        if align ~= "stretch" and child_width < content_width then
-            child_x = content_x + align_offset(align, content_width, child_width)
-        elseif align == "stretch" then
-            child_width = content_width
+        if place ~= constants.Place.STRETCH and child_width < content_width then
+            child_x = content_x + align_offset(place, content_width, child_width)
         end
 
 
