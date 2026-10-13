@@ -4,216 +4,380 @@ dofile(test_dir .. "setup.lua") -- Executes the path fixer instantly
 
 local tui = require("tui")
 local layout = require("tui.layout")
+local constants = require("tui.constants")
 
-local function check(condition, message, found, expected)
-    if not condition then
-        error("FAIL: " .. message .. " found: " .. found .. " expected: " .. expected, 2)
+local passed = 0
+local failed = 0
+
+local function fail(message)
+    error(message, 2)
+end
+
+local function equal(actual, expected, message)
+    if actual ~= expected then
+        fail(("%s: expected %s, got %s"):format(
+            message,
+            tostring(expected),
+            tostring(actual)
+        ))
     end
-
-    print("PASS: " .. message)
 end
 
-local function check_rect(node, x, y, width, height, name)
-    check(node.rect.x == x, name .. ": x", node.rect.x, x)
-    check(node.rect.y == y, name .. ": y", node.rect.y, y)
-    check(node.rect.width == width, name .. ": width", node.rect.width, width)
-    check(node.rect.height == height, name .. ": height", node.rect.height, height)
+local function rect(node, x, y, width, height, label)
+    label = label or "rect"
+
+    equal(node.rect.x, x, label .. ".x")
+    equal(node.rect.y, y, label .. ".y")
+    equal(node.rect.width, width, label .. ".width")
+    equal(node.rect.height, height, label .. ".height")
 end
 
-print("Testing TUI Layout")
-print("------------------")
+local function test(name, fn)
+    local ok, err = pcall(fn)
 
--- TEXT
-local text = tui.text("Hello")
+    if ok then
+        passed = passed + 1
+        print("PASS " .. name)
+    else
+        failed = failed + 1
+        print("FAIL " .. name)
+        print("     " .. tostring(err))
+    end
+end
 
-layout.layout(text, 0, 0, 80, 24)
+local function run(node, width, height, x, y)
+    layout.layout(node, x or 0, y or 0, width, height)
+    return node
+end
 
-check_rect(text, 0, 0, 80, 24, "text")
+local function opts(layout_props)
+    return { layout = layout_props or {} }
+end
 
--- Text intrinsic dimensions
-local intrinsic = tui.text("Hello")
+local function text(value, layout_props)
+    return tui.text(value, opts(layout_props))
+end
 
-layout.layout(intrinsic, 0, 0, 80, 24)
+local function row(children, layout_props)
+    return tui.row(children, opts(layout_props))
+end
 
-check(
-    #intrinsic.props.text == 5,
-    "text intrinsic width"
-)
+local function column(children, layout_props)
+    return tui.column(children, opts(layout_props))
+end
 
--- Explicit dimensions
-local sized = tui.text("Hello", {
-    layout = {
-        width = 20,
-        height = 3,
-    },
-})
+local function assert_constants()
+    assert(constants.NodeKind.TEXT ~= nil, "missing NodeKind.TEXT")
+    assert(constants.NodeKind.ROW ~= nil, "missing NodeKind.ROW")
+    assert(constants.NodeKind.COLUMN ~= nil, "missing NodeKind.COLUMN")
+    assert(constants.Align.START ~= nil, "missing Align.START")
+    assert(constants.Align.CENTER ~= nil, "missing Align.CENTER")
+    assert(constants.Align.END ~= nil, "missing Align.END")
+    assert(constants.Align.STRETCH ~= nil, "missing Align.STRETCH")
+    assert(constants.Place ~= nil, "missing Place constants")
+    assert(constants.Place.START ~= nil, "missing Place.START")
+    assert(constants.Place.CENTER ~= nil, "missing Place.CENTER")
+    assert(constants.Place.END ~= nil, "missing Place.END")
+    assert(constants.Place.STRETCH ~= nil, "missing Place.STRETCH")
+end
 
-layout.layout(sized, 0, 0, 80, 24)
+test("constants expose node kinds and align/place values", function()
+    assert_constants()
+end)
 
-check_rect(sized, 0, 0, 80, 24, "sized text")
+test("text gets its intrinsic size", function()
+    local node = text("hello")
+    run(node, 20, 4)
+    rect(node, 0, 0, 5, 1, "text")
+end)
 
--- COLUMN
-local column = tui.column({
-    tui.text("Hello"),
-    tui.text("World!"),
-})
+test("empty text has zero width and one row of height", function()
+    local node = text("")
+    run(node, 10, 3)
+    rect(node, 0, 0, 0, 1, "empty text")
+end)
 
-layout.layout(column, 0, 0, 20, 10)
+test("empty row does not lay out children", function()
+    local node = row({})
+    run(node, 12, 4)
+    rect(node, 0, 0, 12, 4, "empty row")
+end)
 
-check_rect(column, 0, 0, 20, 10, "column")
+test("empty column does not lay out children", function()
+    local node = column({})
+    run(node, 12, 4)
+    rect(node, 0, 0, 12, 4, "empty column")
+end)
 
-check_rect(
-    column.children[1],
-    0, 0, 5, 1,
-    "column first child"
-)
+test("row places fixed-size children from the start by default", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = row({ first, second })
 
-check_rect(
-    column.children[2],
-    0, 1, 6, 1,
-    "column second child"
-)
+    run(node, 12, 3)
 
--- ROW
-local row = tui.row({
-    tui.text("Hello"),
-    tui.text("World!"),
-})
+    rect(first, 0, 0, 3, 1, "first")
+    rect(second, 3, 0, 2, 1, "second")
+end)
 
-layout.layout(row, 0, 0, 20, 10)
+test("column places fixed-size children from the start by default", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = column({ first, second })
 
-check_rect(row, 0, 0, 20, 10, "row")
+    run(node, 8, 6)
 
-check_rect(
-    row.children[1],
-    0, 0, 5, 1,
-    "row first child"
-)
+    rect(first, 0, 0, 3, 1, "first")
+    rect(second, 0, 1, 2, 1, "second")
+end)
 
-check_rect(
-    row.children[2],
-    5, 0, 6, 1,
-    "row second child"
-)
+test("row grow distributes remaining width proportionally", function()
+    local first = text("fixed")
+    local second = text("a", { grow = 1 })
+    local third = text("b", { grow = 2 })
+    local node = row({ first, second, third })
 
--- ROW + GROW
-local growing_row = tui.row({
-    tui.text("Name"),
-    tui.text("Value", {
-        layout = {
-            grow = 1,
-        },
-    }),
-})
+    run(node, 20, 3)
 
-layout.layout(growing_row, 0, 0, 30, 5)
+    -- Fixed width = 5; remaining width = 15; grow weights = 1:2.
+    rect(first, 0, 0, 5, 1, "fixed")
+    rect(second, 5, 0, 5, 1, "grow 1")
+    rect(third, 10, 0, 10, 1, "grow 2")
+end)
 
-check_rect(
-    growing_row.children[1],
-    0, 0, 4, 1,
-    "growing row fixed child"
-)
+test("column grow distributes remaining height proportionally", function()
+    local first = text("fixed")
+    local second = text("a", { grow = 1 })
+    local third = text("b", { grow = 2 })
+    local node = column({ first, second, third })
 
-check_rect(
-    growing_row.children[2],
-    4, 0, 26, 1,
-    "growing row grow child"
-)
+    run(node, 10, 10)
 
--- Multiple grow values
-local proportional = tui.row({
-    tui.text("A", {
-        layout = {
-            grow = 1,
-        },
-    }),
+    -- Fixed height = 1; remaining height = 9; grow weights = 1:2.
+    rect(first, 0, 0, 5, 1, "fixed")
+    rect(second, 0, 1, 10, 3, "grow 1")
+    rect(third, 0, 4, 10, 6, "grow 2")
+end)
 
-    tui.text("B", {
-        layout = {
-            grow = 2,
-        },
-    }),
-})
+test("nested row grows to fill its parent column", function()
+    local header = text("header")
+    local left = text("left")
+    local right = text("right", { grow = 1 })
+    local content = row({ left, right }, { grow = 1 })
+    local root = column({ header, content })
 
-layout.layout(proportional, 0, 0, 30, 5)
+    run(root, 30, 10)
 
-check_rect(
-    proportional.children[1],
-    0, 0, 10, 1,
-    "proportional first child"
-)
+    rect(header, 0, 0, 6, 1, "header")
+    rect(content, 0, 1, 30, 9, "content row")
+    rect(left, 0, 1, 4, 1, "left")
+    rect(right, 4, 1, 26, 1, "right")
+end)
 
-check_rect(
-    proportional.children[2],
-    10, 0, 20, 1,
-    "proportional second child"
-)
+test("nested column grows to fill its parent row", function()
+    local left = column({
+        text("a"),
+        text("bb"),
+    }, { grow = 1 })
+    local right = text("right")
+    local root = row({ left, right })
 
--- COLUMN + GROW
-local growing_column = tui.column({
-    tui.text("Header"),
+    run(root, 20, 6)
 
-    tui.text("Content", {
-        layout = {
-            grow = 1,
-        },
-    }),
-})
+    rect(left, 0, 0, 15, 6, "left column")
+    rect(left.children[1], 0, 0, 15, 1, "left first child")
+    rect(left.children[2], 0, 1, 15, 1, "left second child")
+    rect(right, 15, 0, 5, 1, "right text")
+end)
 
-layout.layout(growing_column, 0, 0, 40, 20)
+test("row align CENTER positions the fixed-size group on the main axis", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = row({ first, second }, { align = constants.Align.CENTER })
 
-check_rect(
-    growing_column.children[1],
-    0, 0, 6, 1,
-    "growing column fixed child"
-)
+    run(node, 12, 3)
 
-check_rect(
-    growing_column.children[2],
-    0, 1, 7, 19,
-    "growing column grow child"
-)
+    rect(first, 3, 0, 3, 1, "first")
+    rect(second, 6, 0, 2, 1, "second")
+end)
 
--- Nested layout
-local nested = tui.column({
-    tui.text("Header"),
+test("row align END positions the fixed-size group at the end", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = row({ first, second }, { align = constants.Align.END })
 
-    tui.row({
-        tui.text("Left"),
+    run(node, 12, 3)
 
-        tui.text("Right", {
-            layout = {
-                grow = 1,
-            },
-        }),
-    }, {
-        layout = {
-            grow = 1,
-        },
-    }),
-})
+    rect(first, 7, 0, 3, 1, "first")
+    rect(second, 10, 0, 2, 1, "second")
+end)
 
-layout.layout(nested, 0, 0, 30, 10)
+test("column align CENTER positions the fixed-size group on the main axis", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = column({ first, second }, { align = constants.Align.CENTER })
 
-local nested_row = nested.children[2]
+    run(node, 8, 8)
 
-check_rect(
-    nested_row,
-    0, 1, 30, 9,
-    "nested row"
-)
+    rect(first, 0, 2, 3, 1, "first")
+    rect(second, 0, 3, 2, 1, "second")
+end)
 
-check_rect(
-    nested_row.children[1],
-    0, 1, 4, 1,
-    "nested left"
-)
+test("column align END positions the fixed-size group at the end", function()
+    local first = text("abc")
+    local second = text("de")
+    local node = column({ first, second }, { align = constants.Align.END })
 
-check_rect(
-    nested_row.children[2],
-    4, 1, 26, 1,
-    "nested right"
-)
+    run(node, 8, 8)
 
-print("")
-print("All layout tests passed!")
+    rect(first, 0, 5, 3, 1, "first")
+    rect(second, 0, 6, 2, 1, "second")
+end)
+
+test("row place CENTER centers a child on the cross axis", function()
+    local child = column({ text("x") })
+    local node = row({ child }, { place = constants.Place.CENTER })
+
+    run(node, 10, 8)
+
+    rect(child, 0, 3, 1, 1, "child column")
+end)
+
+test("row place END places a child at the cross-axis end", function()
+    local child = column({ text("x") })
+    local node = row({ child }, { place = constants.Place.END })
+
+    run(node, 10, 8)
+
+    rect(child, 0, 7, 1, 1, "child column")
+end)
+
+test("column place CENTER centers a child on the cross axis", function()
+    local child = row({ text("x") })
+    local node = column({ child }, { place = constants.Place.CENTER })
+
+    run(node, 10, 6)
+
+    rect(child, 4, 0, 1, 1, "child row")
+end)
+
+test("column place END places a child at the cross-axis end", function()
+    local child = row({ text("x") })
+    local node = column({ child }, { place = constants.Place.END })
+
+    run(node, 10, 6)
+
+    rect(child, 9, 0, 1, 1, "child row")
+end)
+
+test("place STRETCH stretches container children across the cross axis", function()
+    local child_row = row({ text("x") })
+    local node = column({ child_row }, { place = constants.Place.STRETCH })
+
+    run(node, 10, 6)
+
+    rect(child_row, 0, 0, 10, 1, "child row")
+end)
+
+test("place STRETCH does not stretch text intrinsic height", function()
+    local child = text("x")
+    local node = row({ child }, { place = constants.Place.STRETCH })
+
+    run(node, 10, 6)
+
+    rect(child, 0, 0, 1, 1, "text child")
+end)
+
+test("explicit child width and height override intrinsic dimensions", function()
+    local child = text("abc", { width = 7, height = 3 })
+    local node = row({ child })
+
+    run(node, 15, 8)
+
+    rect(child, 0, 0, 7, 3, "explicit-size text")
+end)
+
+test("row padding offsets children and reduces content width", function()
+    local first = text("a")
+    local second = text("b", { grow = 1 })
+    local node = row(
+        { first, second },
+        { padding = { top = 1, right = 2, bottom = 1, left = 3 } }
+    )
+
+    run(node, 20, 6)
+
+    -- Content rect: x=3, y=1, width=15, height=4.
+    -- One fixed column leaves 14 columns for the growing child.
+    rect(first, 3, 1, 1, 1, "first")
+    rect(second, 4, 1, 14, 1, "second")
+end)
+
+test("column padding offsets children and reduces content height", function()
+    local first = text("a")
+    local second = text("b", { grow = 1 })
+    local node = column(
+        { first, second },
+        { padding = { top = 2, right = 1, bottom = 1, left = 3 } }
+    )
+
+    run(node, 12, 10)
+
+    -- Content rect: x=3, y=2, width=8, height=7.
+    -- One fixed row leaves 6 rows for the growing child.
+    rect(first, 3, 2, 1, 1, "first")
+    rect(second, 3, 3, 1, 6, "second")
+end)
+
+test("numeric padding applies equally on every side", function()
+    local child = text("x")
+    local node = row({ child }, { padding = 2 })
+
+    run(node, 12, 8)
+
+    rect(child, 2, 2, 1, 1, "child")
+end)
+
+test("align CENTER does not create a negative offset on overflow", function()
+    local first = text("123456")
+    local second = text("7890")
+    local node = row({ first, second }, { align = constants.Align.CENTER })
+
+    run(node, 8, 3)
+
+    -- Fixed content is wider than the container, so positioning starts at x=0.
+    rect(first, 0, 0, 6, 1, "first")
+    rect(second, 6, 0, 4, 1, "second")
+end)
+
+test("align END does not create a negative offset on overflow", function()
+    local first = text("123456")
+    local second = text("7890")
+    local node = column({ first, second }, { align = constants.Align.END })
+
+    run(node, 8, 1)
+
+    -- Fixed content is taller than the container, so positioning starts at y=0.
+    rect(first, 0, 0, 6, 1, "first")
+    rect(second, 0, 1, 4, 1, "second")
+end)
+
+test("non-zero origin is preserved throughout nested layout", function()
+    local first = text("a")
+    local second = text("b")
+    local child = row({ first, second })
+    local root = column({ child })
+
+    run(root, 10, 5, 7, 4)
+
+    rect(root, 7, 4, 10, 5, "root")
+    rect(child, 7, 4, 10, 1, "child row")
+    rect(first, 7, 4, 1, 1, "first")
+    rect(second, 8, 4, 1, 1, "second")
+end)
+
+print(("\nLayout tests: %d passed, %d failed"):format(passed, failed))
+
+if failed > 0 then
+    error(("%d layout test(s) failed"):format(failed))
+end
