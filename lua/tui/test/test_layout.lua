@@ -237,8 +237,8 @@ test("column align END positions the fixed-size group at the end", function()
 
     run(node, 8, 8)
 
-    rect(first, 0, 5, 3, 1, "first")
-    rect(second, 0, 6, 2, 1, "second")
+    rect(first, 0, 6, 3, 1, "first")
+    rect(second, 0, 7, 2, 1, "second")
 end)
 
 test("row place CENTER centers a child on the cross axis", function()
