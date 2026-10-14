@@ -162,8 +162,8 @@ test("column grow distributes remaining height proportionally", function()
 
     -- Fixed height = 1; remaining height = 9; grow weights = 1:2.
     rect(first, 0, 0, 5, 1, "fixed")
-    rect(second, 0, 1, 10, 3, "grow 1")
-    rect(third, 0, 4, 10, 6, "grow 2")
+    rect(second, 0, 1, 1, 3, "grow 1")
+    rect(third, 0, 4, 1, 6, "grow 2")
 end)
 
 test("nested row grows to fill its parent column", function()
@@ -192,8 +192,8 @@ test("nested column grows to fill its parent row", function()
     run(root, 20, 6)
 
     rect(left, 0, 0, 15, 6, "left column")
-    rect(left.children[1], 0, 0, 15, 1, "left first child")
-    rect(left.children[2], 0, 1, 15, 1, "left second child")
+    rect(left.children[1], 0, 0, 1, 1, "left first child")
+    rect(left.children[2], 0, 1, 2, 1, "left second child")
     rect(right, 15, 0, 5, 1, "right text")
 end)
 
@@ -226,8 +226,8 @@ test("column align CENTER positions the fixed-size group on the main axis", func
 
     run(node, 8, 8)
 
-    rect(first, 0, 2, 3, 1, "first")
-    rect(second, 0, 3, 2, 1, "second")
+    rect(first, 0, 3, 3, 1, "first")
+    rect(second, 0, 4, 2, 1, "second")
 end)
 
 test("column align END positions the fixed-size group at the end", function()
