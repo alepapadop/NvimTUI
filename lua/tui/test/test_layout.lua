@@ -86,15 +86,22 @@ test("constants expose node kinds and align/place values", function()
 end)
 
 test("text gets its intrinsic size", function()
-    local node = text("hello")
-    run(node, 20, 4)
-    rect(node, 0, 0, 5, 1, "text")
+    local child = tui.text("hello")
+    local root = tui.row({ child })
+
+    layout.layout(root, 0, 0, 20, 4)
+
+    rect(root, 0, 0, 20, 4, "root")
+    rect(child, 0, 0, 5, 1, "text")
 end)
 
 test("empty text has zero width and one row of height", function()
-    local node = text("")
-    run(node, 10, 3)
-    rect(node, 0, 0, 0, 1, "empty text")
+    local child = tui.text("")
+    local root = tui.row({ child })
+
+    layout.layout(root, 0, 0, 10, 3)
+
+    rect(child, 0, 0, 0, 1, "empty text")
 end)
 
 test("empty row does not lay out children", function()
